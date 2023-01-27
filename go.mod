@@ -1,4 +1,4 @@
-module je7ans/priority
+module github.com/je7ans/priority
 
 go 1.18
 

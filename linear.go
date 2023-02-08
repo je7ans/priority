@@ -1,8 +1,6 @@
 package priority
 
 import (
-	"fmt"
-
 	"golang.org/x/exp/constraints"
 )
 
@@ -45,7 +43,6 @@ func (q *linearPQ[T]) Pop() (top T, ok bool) {
 	if ix, ok = q.findHiPriority(); ok {
 		top = q.items[ix]
 		q.items = append(q.items[:ix], q.items[ix+1:]...)
-		fmt.Printf("popping %v - remaining: %v\n", top, q.items)
 	}
 
 	return

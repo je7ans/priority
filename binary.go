@@ -2,16 +2,19 @@ package priority
 
 import "golang.org/x/exp/constraints"
 
-// binHeap provides a binary heap
-type binHeap[T any] struct {
+// binaryHeap provides a binary heap
+type binaryHeap[T comparable] struct {
 	nodes []T
 	pred  predicate[T]
+	index map[T]int
 }
 
-// newBinaryHeap returns a binary-heap based priority queue
-func newBinaryHeap[T any](p predicate[T], items ...T) *binHeap[T] {
-
-	bh := &binHeap[T]{pred: p}
+// NewBinaryHeap returns a binary-heap based priority queue
+func NewBinaryHeap[T comparable](p predicate[T], items ...T) *binaryHeap[T] {
+	bh := &binaryHeap[T]{
+		pred:  p,
+		index: make(map[T]int),
+	}
 
 	for _, item := range items {
 		bh.Push(item)
@@ -21,30 +24,23 @@ func newBinaryHeap[T any](p predicate[T], items ...T) *binHeap[T] {
 }
 
 // MinHeapBinary TODO
-func MinHeapBinary[T constraints.Ordered](items ...T) Queue[T] {
-	return newBinaryHeap(
-		func(a, b T) bool { return a < b },
-		items...,
-	)
+func MinHeapBinary[T constraints.Ordered](items ...T) *binaryHeap[T] {
+	return NewBinaryHeap(lessThan[T], items...)
 }
 
 // MaxHeapBinary TODO
-func MaxHeapBinary[T constraints.Ordered](items ...T) Queue[T] {
-	return newBinaryHeap(
-		func(a, b T) bool { return a > b },
-		items...,
-	)
+func MaxHeapBinary[T constraints.Ordered](items ...T) *binaryHeap[T] {
+	return NewBinaryHeap(greaterThan[T], items...)
 }
 
 // IsEmpty returns true if the binary heap is empty - false otherwise
-func (bh *binHeap[T]) IsEmpty() bool {
+func (bh *binaryHeap[T]) IsEmpty() bool {
 	return len(bh.nodes) == 0
 }
 
 // Peek provides the highest priority item without removing it from the binary heap
 // boolean retured indicates if the operation was successful i.e returns false if structure is empty
-func (bh *binHeap[T]) Peek() (top T, ok bool) {
-
+func (bh *binaryHeap[T]) Peek() (top T, ok bool) {
 	if bh.IsEmpty() {
 		return
 	}
@@ -54,13 +50,13 @@ func (bh *binHeap[T]) Peek() (top T, ok bool) {
 
 // Pop provides the highest priority item and removes it from the binary heap
 // boolean retured indicates if the operation was successful i.e returns false if structure is empty
-func (bh *binHeap[T]) Pop() (top T, ok bool) {
-
+func (bh *binaryHeap[T]) Pop() (top T, ok bool) {
 	if bh.IsEmpty() {
 		return
 	}
 
 	top = bh.nodes[0]
+	delete(bh.index, top)
 
 	last := len(bh.nodes) - 1
 	bh.swap(0, last)
@@ -76,14 +72,25 @@ func (bh *binHeap[T]) Pop() (top T, ok bool) {
 // Push adds an item to the binary heap
 // append the item to the end of the array (becomes the most bottom-right leaf node)
 // fix the heap structure bottom-to-top
-func (bh *binHeap[T]) Push(item T) {
+func (bh *binaryHeap[T]) Push(item T) {
+	index := len(bh.nodes)
 	bh.nodes = append(bh.nodes, item)
+	bh.index[item] = index
 	bh.upHeapify(len(bh.nodes) - 1)
 }
 
-// upHeapify fixes the heap structure bottoms-up recursively
-func (bh *binHeap[T]) upHeapify(child int) {
+func (bh *binaryHeap[T]) Update(t T, update UpdateFunc[T]) {
+	ix, ok := bh.index[t]
+	if !ok { // item is not in the heap
+		return
+	}
 
+	bh.nodes[ix] = update(bh.nodes[ix])
+	bh.upHeapify(ix)
+}
+
+// upHeapify fixes the heap structure bottom-up recursively
+func (bh *binaryHeap[T]) upHeapify(child int) {
 	if child == 0 { // reached root node - no fixing required
 		return
 	}
@@ -98,7 +105,7 @@ func (bh *binHeap[T]) upHeapify(child int) {
 // downHeapify fixes the heap structure recursively top-down starting at parent node
 // if the parent node has lower priority than at least one of its children, swap with the
 // highest priority child and recurse from that child node index
-func (bh *binHeap[T]) downHeapify(parent int) {
+func (bh *binaryHeap[T]) downHeapify(parent int) {
 
 	hiPriority := parent
 	left := parent*2 + 1
@@ -123,11 +130,14 @@ func (bh *binHeap[T]) downHeapify(parent int) {
 }
 
 // swap nodes at indices i and j
-func (bh *binHeap[T]) swap(i, j int) {
-	bh.nodes[i], bh.nodes[j] = bh.nodes[j], bh.nodes[i]
+func (bh *binaryHeap[T]) swap(i, j int) {
+	ns := bh.nodes
+	ns[i], ns[j] = ns[j], ns[i]
+	bh.index[ns[i]] = i
+	bh.index[ns[j]] = j
 }
 
 // checkPriority of items at given indices
-func (bh *binHeap[T]) checkPriority(i, j int) bool {
+func (bh *binaryHeap[T]) checkPriority(i, j int) bool {
 	return bh.pred(bh.nodes[i], bh.nodes[j])
 }

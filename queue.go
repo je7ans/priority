@@ -1,8 +1,11 @@
 // Package priority provides generic priority queue implementations
 package priority
 
-// PQ provides a priority queue interface
-type Queue[T any] interface {
+import "golang.org/x/exp/constraints"
+
+// Queue provides a priority queue interface
+type Queue[T comparable] interface {
+
 	// IsEmpty returns true if the priority queue is empty - false otherwise
 	IsEmpty() bool
 
@@ -18,6 +21,22 @@ type Queue[T any] interface {
 	Push(T)
 }
 
+type QueueWithUpdate[T comparable] interface {
+	Queue[T]
+
+	Update(T, UpdateFunc[T])
+}
+
 // predicate provides a function to determine the priority between two items
 // returns true if a has a higher priority that b, false otherwise
 type predicate[T any] func(a, b T) bool
+
+func lessThan[T constraints.Ordered](a, b T) bool {
+	return a < b
+}
+
+func greaterThan[T constraints.Ordered](a, b T) bool {
+	return a > b
+}
+
+type UpdateFunc[T any] func(T) T
